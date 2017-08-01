@@ -1,6 +1,7 @@
 # HeadlineAPI
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![CircleCI](https://circleci.com/gh/BolajiOlajide/HeadlineAPI.svg?style=svg)](https://circleci.com/gh/BolajiOlajide/HeadlineAPI)
 
 This repository contains an API for the mobile application: `HEADLINE`. `HEADLINE` is an iOS (should be coming to Android anytime soon) that helps you get relevant news and happenings from top nigerian websites.
 
