@@ -10,6 +10,8 @@ joshgrid/mail_api/static/
 .idea
 assets/
 **/*.db
+**/*.sqlite
+*.sqlite
 *.db
 .coverage
 dist/
@@ -18,3 +20,4 @@ celerybeat.pid
 dump.rdb
 yarn-error.log
 __pycache__/
+.cache
