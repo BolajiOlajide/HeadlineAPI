@@ -56,7 +56,6 @@ def login():
         return errors.unauthorized("Username and password doesn't match.")
 
     token = user.generate_auth_token().decode('utf-8')
-    print(dir(token))
     return jsonify({
         "token": token,
         "message": "You've been successfully signed in"
