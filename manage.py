@@ -57,6 +57,17 @@ def drop_db():
             db.drop_all()
 
 
+# Define root route
+@app.route('/')
+def index():
+    """
+    Index route for Headline NG API.
+
+    Doesn't require authentication, just there for the user to know what's up.
+    """
+    return '<h1>Welcome to Headline-NG API</h1>'
+
+
 # Run the application using the Flask manager
 if __name__ == '__main__':
     manager.run()
