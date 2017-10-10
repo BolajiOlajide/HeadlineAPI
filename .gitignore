@@ -21,3 +21,5 @@ dump.rdb
 yarn-error.log
 __pycache__/
 .cache
+migrations/
+alchemydumps/

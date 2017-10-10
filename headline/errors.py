@@ -4,19 +4,21 @@ This script contains the routes for the error handlers.
 This installs application-wide error handlers
 """
 from flask import jsonify
+from .jsend import error
 
 
-def not_found(message):
+def not_found(message="The specified resource cannot be found."):
     """
     The handler handles the 404 (Resource not found) error.
     
     This returns a json object with a description of the error type.
     """
-    response = jsonify({
+
+    response = {
         'status': 404,
         'error': 'Resource not found',
         'message': message
-    })
+    }
     response.status_code = 404
     return response
 
@@ -27,13 +29,12 @@ def bad_request(message):
 
     This returns a json object with a description of the error type.
     """
-    response = jsonify({
+    response = {
         'status': 400,
         'error': "Bad Request",
         'message': message
-    })
-    response.status_code = 400
-    return response
+    }
+    return error(response), 400
 
 
 def unauthorized(message):
@@ -42,13 +43,12 @@ def unauthorized(message):
 
     This returns a json object with a description of the error type.
     """
-    response = jsonify({
+    response = {
         'status': 401,
         'error': "Unauthorized",
         'message': message
-    })
-    response.status_code = 401
-    return response
+    }
+    return error(response), 401
 
 
 def token_error(message):

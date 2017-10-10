@@ -5,6 +5,7 @@ All decorators to be used in the application are defined here.
 """
 
 import functools
+import re
 
 from flask import jsonify, wrappers, request, url_for, current_app
 
@@ -37,6 +38,12 @@ def json(f):
             response.status_code = status
         return response
     return wrapped
+
+
+def to_camel_case(snake_str):
+    """Format string to camel case."""
+    title_str = snake_str.title().replace("_", "")
+    return title_str[0].lower() + title_str[1:]
 
 
 def paginate():
@@ -96,3 +103,7 @@ def paginate():
             })
         return wrapped
         return decorator
+
+
+def email_validation(email_address):
+    return bool(re.search(r"^[\w\.\+\-]+\@[\w]+\.[a-z]{2,3}$", email_address))

@@ -24,6 +24,7 @@ def create_app(config_name):
     db.init_app(app)
     app.config['CORS_HEADERS'] = 'Content-Type'
     cors = CORS(app)
+    cors.init_app(app)
 
     # Register the authentication blueprint in the application instance.
     from headline.auth import authentication as auth_blueprint
@@ -50,6 +51,5 @@ def create_app(config_name):
                                 "application"))
         response.status_code = 500
         return response
-
 
     return app

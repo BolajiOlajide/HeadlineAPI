@@ -1,6 +1,8 @@
+"""Write test for models."""
 import pytest
 
 from headline.models import User
+
 
 def test_password_setter():
     """
@@ -12,6 +14,7 @@ def test_password_setter():
     sample_user.hash_password('cat')
     assert sample_user.password is not None
 
+
 def test_password_can_be_decrypred():
     """
     Test the hashed password.
@@ -22,6 +25,7 @@ def test_password_can_be_decrypred():
     user = User(username='test')
     user.hash_password('cat')
     assert user.verify_password('cat') is True
+
 
 def test_password_hash_isnt_similar():
     """

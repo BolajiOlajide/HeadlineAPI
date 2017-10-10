@@ -6,16 +6,22 @@ The SQLAlchemy models for the database is defined here.
 
 from datetime import datetime
 
-from flask import current_app, url_for
+from flask import current_app
 from itsdangerous import (
     TimedJSONWebSignatureSerializer as Serializer,
     BadSignature, SignatureExpired)
 from werkzeug.security import check_password_hash, generate_password_hash
+import sqlalchemy
 
 from . import db
+from .id_generator import PushID
+from .helpers import to_camel_case
 
 
-class CRUDMixin(object):
+push_id = PushID()
+
+
+class Base(db.Model):
     """
     Define the Create,Read, Update, Delete mixin.
 
@@ -23,11 +29,19 @@ class CRUDMixin(object):
     columns and methods.
     """
 
+    __abstract__ = True
+
+    id = db.Column(db.String, primary_key=True)
     date_created = db.Column(
         db.DateTime, default=datetime.now(), nullable=False)
     date_modified = db.Column(
         db.DateTime, default=datetime.now(),
         onupdate=datetime.now(), nullable=False)
+
+    def serialize(self):
+        """Map model objects to dict representation."""
+        return {to_camel_case(column.name): getattr(self, column.name)
+                for column in self.__table__.columns}
 
     def save(self):
         """
@@ -35,8 +49,15 @@ class CRUDMixin(object):
 
         Save instance of the object to database and commit.
         """
-        db.session.add(self)
-        db.session.commit()
+        try:
+            db.session.add(self)
+            db.session.commit()
+            return True
+        except (sqlalchemy.exc.SQLAlchemyError,
+                sqlalchemy.exc.IntegrityError,
+                sqlalchemy.exc.InvalidRequestError):
+            db.session.rollback()
+            return False
 
     def delete(self):
         """
@@ -44,11 +65,69 @@ class CRUDMixin(object):
 
         Deletes instance of an object from database
         """
-        db.session.delete(self)
-        db.session.commit()
+        try:
+            db.session.delete(self)
+            db.session.commit()
+            return True
+        except sqlalchemy.exc.SQLAlchemyError:
+            db.session.rollback()
+            return False
+
+    @classmethod
+    def fetch_all(cls):
+        """ Returns all the data in the model"""
+        return cls.query.all()
+
+    @classmethod
+    def get(cls, *args):
+        """Returns data by the Id"""
+        return cls.query.get(*args)
+
+    @classmethod
+    def count(cls):
+        """Returns the count of all the data in the model"""
+        return cls.query.count()
+
+    @classmethod
+    def get_first_item(cls):
+        """Returns the first data in the model"""
+        return cls.query.first()
+
+    @classmethod
+    def order_by(cls, *args):
+        """Query and order the data of the model"""
+        return cls.query.order_by(*args)
+
+    @classmethod
+    def filter_all(cls, **kwargs):
+        """Query and filter the data of the model"""
+        return cls.query.filter(**kwargs).all()
+
+    @classmethod
+    def filter_by(cls, **kwargs):
+        """Query and filter the data of the model"""
+        return cls.query.filter_by(**kwargs)
+
+    @classmethod
+    def find_first(cls, **kwargs):
+        """
+        Query and filter the data of a model,
+        returning the first result
+        """
+        return cls.query.filter_by(**kwargs).first()
+
+    @classmethod
+    def filter_and_count(cls, **kwargs):
+        """Query, filter and counts all the data of a model"""
+        return cls.query.filter_by(**kwargs).count()
+
+    @classmethod
+    def filter_and_order(cls, *args, **kwargs):
+        """Query, filter and orders all the data of a model"""
+        return cls.query.filter_by(**kwargs).order_by(*args)
 
 
-class User(CRUDMixin, db.Model):
+class User(Base):
     """
     Set up the User model.
 
@@ -56,10 +135,11 @@ class User(CRUDMixin, db.Model):
     """
 
     __tablename__ = 'users'
-    user_id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(32), unique=True, index=True,
                          nullable=False)
     password = db.Column(db.String(128), nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    isVerified = db.Column(db.Boolean, default=False)
 
     def hash_password(self, password):
         """
@@ -85,7 +165,7 @@ class User(CRUDMixin, db.Model):
         This function generates a token to be used by the user for requests.
         """
         s = Serializer(current_app.config['SECRET_KEY'], expires_in=expiration)
-        return s.dumps({'id': self.user_id})
+        return s.dumps({'id': self.id})
 
     @staticmethod
     def verify_auth_token(token):
@@ -116,7 +196,7 @@ class User(CRUDMixin, db.Model):
         Mold up all the properties of User object into an object for display.
         """
 
-        return { 'username': self.username }
+        return {'username': self.username}
 
     def __repr__(self):
         """
@@ -126,3 +206,16 @@ class User(CRUDMixin, db.Model):
         """
 
         return '<User: {}>'.format(self.username)
+
+
+def fancy_id_generator(mapper, connection, target):
+    """A function to generate unique identifiers on insert."""
+    target.id = push_id.next_id()
+
+
+# associate the listener function with models, to execute during the
+# "before_insert" event
+tables = [User]
+
+for table in tables:
+    sqlalchemy.event.listen(table, 'before_insert', fancy_id_generator)

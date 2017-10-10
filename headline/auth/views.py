@@ -3,15 +3,16 @@ Authentication settings for the BucketList API.
 
 Password verification and user registration takes place here.
 """
-from flask import g, jsonify, request
+from flask import g, request
 from flask_cors import cross_origin
 from flask_httpauth import HTTPBasicAuth
-import sqlalchemy
 
 from . import authentication
-from headline import db, errors
-from headline.helpers import json
+from headline import errors
+from headline.helpers import email_validation
 from headline.models import User
+from headline.jsend import success
+
 
 auth = HTTPBasicAuth()
 
@@ -45,26 +46,29 @@ def login():
     if not request.json:
         return errors.bad_request("No JSON file detected.")
 
-    username = request.json.get('username').strip()
-    password = request.json.get('password').strip()
+    _username = request.json.get('username')
+    _password = request.json.get('password')
 
-    if not (username and password):
+    if not (_username and _password):
         return errors.bad_request("username or password missing")
+    
+    username = _username.strip()
+    password = _password.strip()
 
     user = User.query.filter_by(username=username).first()
     if not (user and user.verify_password(password)):
-        return errors.unauthorized("Username and password doesn't match.")
+        return errors.unauthorized("Username and password didn't match.")
 
     token = user.generate_auth_token().decode('utf-8')
-    return jsonify({
+    response = {
         "token": token,
         "message": "You've been successfully signed in"
-    }), 200
+    }
+    return success(response), 200
 
 
 @authentication.route('/register', methods=['POST', 'OPTIONS'])
 @cross_origin()
-@json
 def register_user():
     """
     Create a new user.
@@ -75,25 +79,39 @@ def register_user():
     if not request.json:
         return errors.bad_request("No JSON file detected.")
 
-    username = request.json.get('username').strip()
-    password = request.json.get('password').strip()
+    _username = request.json.get('username', None)
+    _password = request.json.get('password', None)
+    _email = request.json.get('email', None)
 
-    if not (username and password):
-        return errors.bad_request("username or password missing.")
+    if not (_username and _password):
+        return errors.bad_request("Username or Password field is missing.")
+    
+    if not _email:
+        return errors.bad_request("Email field is missing.")
+
+    username = _username.strip()
+    password = _password.strip()
 
     if (len(password) < 6):
         return errors.bad_request("Password strength is low. Try again")
 
-    if User.query.filter_by(username=username).first():
-        return errors.bad_request("username already exist.")
+    # Email validation
+    if not email_validation(_email):
+        return errors.bad_request("Please enter a valid email address!")
 
-    try:
-        user = User(username=username)
-        user.hash_password(password)
-        user.save()
-        return user, 201
-    except (sqlalchemy.exc.IntegrityError, sqlalchemy.exc.InvalidRequestError):
-        db.session().rollback()
+    if User.query.filter_by(username=username).first():
+        return errors.bad_request("username:{} already exist".format(
+                                 username))
+
+    user = User(username=username, email=_email)
+    user.hash_password(password)
+    if user.save():
+        token = user.generate_auth_token().decode('utf-8')
+        return success({
+            "username": user.username,
+            "token": token
+        }), 201
+    else:
         return errors.bad_request("An error occurred while saving. "
                                   "Please try again.")
 
@@ -105,4 +123,4 @@ def auth_error():
 
     Handle all auth errors.
     """
-    return errors.token_error('Invalid credentials')
+    return errors.unauthorized('Invalid credentials')

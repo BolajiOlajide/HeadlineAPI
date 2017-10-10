@@ -3,8 +3,8 @@ Test Authentication.
 
 Test user authentication and token generation.
 """
-import unittest
 import json
+import unittest
 
 from flask import url_for
 
@@ -30,16 +30,11 @@ class TestUserModel(unittest.TestCase):
         self.app_context.push()
         db.create_all()
         self.client = self.app.test_client()
-        self.user = User(username='test_user')
+        self.user = User(username='test_user', email='test@user.com')
         self.user.hash_password('test_password')
         self.user.save()
 
     def tearDown(self):
-        """
-        Tear down method.
-
-        This method removes every information related to the test cases.
-        """
         db.session.remove()
         db.drop_all()
         self.app_context.pop()
@@ -52,7 +47,7 @@ class TestUserModel(unittest.TestCase):
         """
         auth_token = self.user.generate_auth_token()
         assert isinstance(auth_token, bytes) is True
-        assert User.verify_auth_token(auth_token).user_id == self.user.user_id
+        assert User.verify_auth_token(auth_token).id == self.user.id
 
     def test_register(self):
         """
@@ -63,13 +58,69 @@ class TestUserModel(unittest.TestCase):
         with self.client:
             response = self.client.post(
                 url_for('authentication.register_user'),
-                data=json.dumps({'username': 'proton', 'password': 'andela'}),
+                data=json.dumps({
+                    'username': 'proton',
+                    'password': 'andela',
+                    'email': 'proton@andela.com'
+                }),
                 content_type='application/json'
             )
-        data = json.loads(response.data.decode())
-        assert data["username"] == "proton"
-        assert response.content_type == 'application/json'
         assert response.status_code == 201
+
+    def test_register_with_null_values(self):
+        """
+        Test register user.
+
+        This tests user registration route with null values
+        sent to the API.
+        """
+        with self.client:
+            response = self.client.post(
+                url_for('authentication.register_user'),
+                data=json.dumps({
+                    'username': '',
+                    'password': '',
+                    'email': ''
+                }),
+                content_type='application/json'
+            )
+        assert response.status_code == 400
+
+    def test_register_with_existing_username(self):
+        """
+        Test register user.
+
+        This tests user registration route with already existing username
+        """
+        with self.client:
+            response = self.client.post(
+                url_for('authentication.register_user'),
+                data=json.dumps({
+                    'username': 'test_user',
+                    'password': 'andela',
+                    'email': 'proton@andela.com'
+                }),
+                content_type='application/json'
+            )
+        assert response.status_code == 400
+
+    def test_register_with_invalid_username(self):
+        """
+        Test register user.
+
+        This tests user registration route with invalid email address
+        """
+        with self.client:
+            response = self.client.post(
+                url_for('authentication.register_user'),
+                data=json.dumps({
+                    'username': 'proton_test',
+                    'password': 'andela',
+                    'email': 'protonandela.com'
+                }),
+                content_type='application/json'
+            )
+        assert response.status_code == 400
 
     def test_login(self):
         """
@@ -85,7 +136,6 @@ class TestUserModel(unittest.TestCase):
                     {'username': 'test_user', 'password': 'test_password'}),
                 content_type='application/json'
             )
-        assert response.content_type == 'application/json'
         assert response.status_code == 200
 
     def test_login_without_json(self):
@@ -99,7 +149,6 @@ class TestUserModel(unittest.TestCase):
                 url_for('authentication.login'),
                 data={'username': 'test_user', 'password': 'test_password'},
             )
-        assert response.content_type == 'application/json'
         assert response.status_code == 400
 
     def test_login_with_null_password(self):
@@ -114,7 +163,6 @@ class TestUserModel(unittest.TestCase):
                 data=json.dumps({'username': 'test_user', 'password': ''}),
                 content_type='application/json'
             )
-        assert response.content_type == 'application/json'
         assert response.status_code == 400
 
     def test_login_with_wrong_credentials(self):
@@ -131,5 +179,4 @@ class TestUserModel(unittest.TestCase):
                 ),
                 content_type='application/json'
             )
-        assert response.content_type == 'application/json'
         assert response.status_code == 401

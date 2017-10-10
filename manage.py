@@ -7,6 +7,7 @@ This is the script that starts the flask application.
 import unittest
 
 import dotenv
+from flask import render_template
 from flask_migrate import Migrate, MigrateCommand
 from flask_script import Shell, Manager, prompt_bool, Server
 
@@ -58,14 +59,14 @@ def drop_db():
 
 
 # Define root route
-@app.route('/')
+@app.route('/', methods=['GET'])
 def index():
     """
     Index route for Headline NG API.
 
     Doesn't require authentication, just there for the user to know what's up.
     """
-    return '<h1>Welcome to Headline-NG API</h1>'
+    return render_template('index.html')
 
 
 # Run the application using the Flask manager
