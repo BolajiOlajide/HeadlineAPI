@@ -1,5 +1,4 @@
 """Write test for models."""
-import pytest
 
 from headline.models import User
 

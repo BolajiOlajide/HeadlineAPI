@@ -30,6 +30,10 @@ def create_app(config_name):
     from headline.auth import authentication as auth_blueprint
     app.register_blueprint(auth_blueprint, url_prefix='/auth')
 
+    # Register the main app's blueprint in the application instance.
+    from headline.main import main as main_blueprint
+    app.register_blueprint(main_blueprint, url_prefix='/api/v1')
+
     # handle default 404 exceptions with a custom response
     @app.errorhandler(404)
     def resource_not_found(error):

@@ -208,6 +208,15 @@ class User(Base):
         return '<User: {}>'.format(self.username)
 
 
+class Music(Base):
+    """Setup the model for posts"""
+
+    __tablename__ = 'music'
+    title = db.Column(db.String(128), index=True, nullable=False)
+    link = db.Column(db.String(128), unique=True, nullable=False)
+    source = db.Column(db.String(120), nullable=False)
+
+
 def fancy_id_generator(mapper, connection, target):
     """A function to generate unique identifiers on insert."""
     target.id = push_id.next_id()
