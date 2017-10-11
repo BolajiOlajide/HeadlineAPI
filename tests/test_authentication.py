@@ -8,8 +8,12 @@ import unittest
 
 from flask import url_for
 
-from headline import db, create_app
-from headline.models import User
+try:
+    from headline import db, create_app
+    from headline.models import User
+except:
+    from headlineapi.headline import db, create_app
+    from headline.models import User
 
 
 class TestUserModel(unittest.TestCase):
